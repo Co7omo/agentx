@@ -1,0 +1,14 @@
+[project]
+name = "data-pipeline"
+language = "python"
+python_version = "3.11"
+
+[model]
+default = "gpt-4"
+temperature = 0.1
+
+[tools]
+allowed = ["file_read", "file_write", "shell", "search", "web_search"]
+
+[hooks]
+pre_commit = "pytest tests/unit/ -x --quiet"

@@ -1,0 +1,31 @@
+from agent_migrate.ir.schema import (
+    ArtifactIR,
+    ArtifactKind,
+    Confidence,
+    ExecutionModel,
+    ExternalDependency,
+    ManualTodo,
+    Platform,
+    PortabilityRisk,
+    Section,
+    SemanticIntent,
+    Trigger,
+    Warning,
+    WarningLevel,
+)
+
+__all__ = [
+    "ArtifactIR",
+    "ArtifactKind",
+    "Confidence",
+    "ExecutionModel",
+    "ExternalDependency",
+    "ManualTodo",
+    "Platform",
+    "PortabilityRisk",
+    "Section",
+    "SemanticIntent",
+    "Trigger",
+    "Warning",
+    "WarningLevel",
+]
