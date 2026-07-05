@@ -12,7 +12,6 @@ from pathlib import Path
 from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
-    Confidence,
     ExternalDependency,
     Platform,
     PortabilityRisk,
@@ -49,7 +48,8 @@ def _parse_instruction_doc(ir: ArtifactIR) -> ArtifactIR:
 
     # Extract constraints (lines starting with "- " under constraint-like headings)
     for sec in sections:
-        if any(kw in sec.title.lower() for kw in ("constraint", "rule", "policy", "never", "always", "do not")):
+        constraint_keywords = ("constraint", "rule", "policy", "never", "always", "do not")
+        if any(kw in sec.title.lower() for kw in constraint_keywords):
             ir.constraints.extend(_extract_list_items(sec.content))
 
     # Detect external dependencies
@@ -141,8 +141,8 @@ def _parse_subagent(ir: ArtifactIR) -> ArtifactIR:
 def _parse_codex_agent_toml(ir: ArtifactIR) -> ArtifactIR:
     """Parse a Codex agent TOML file."""
     try:
-        import tomli
-        data = tomli.loads(ir.raw_content)
+        from agent_migrate._compat import tomllib
+        data = tomllib.loads(ir.raw_content)
     except Exception:
         ir.add_warning("Failed to parse TOML content", level=WarningLevel.ERROR)
         return ir
@@ -203,8 +203,8 @@ def _parse_config(ir: ArtifactIR) -> ArtifactIR:
 
     if suffix == ".toml":
         try:
-            import tomli
-            ir.metadata = tomli.loads(content)
+            from agent_migrate._compat import tomllib
+            ir.metadata = tomllib.loads(content)
         except Exception:
             ir.add_warning("Failed to parse TOML", level=WarningLevel.ERROR)
     elif suffix == ".json":

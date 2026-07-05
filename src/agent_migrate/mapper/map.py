@@ -13,19 +13,28 @@ from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
     Confidence,
-    ExecutionModel,
-    ManualTodo,
     Platform,
     PortabilityRisk,
     Section,
     SemanticIntent,
-    Warning,
     WarningLevel,
 )
 
 
 def map_artifact(ir: ArtifactIR, target: Platform) -> ArtifactIR:
-    """Map an IR to the target platform, returning a new IR."""
+    """Map an IR to the target platform, returning a new IR.
+
+    A mapper plugin registered for (source, target) overrides the
+    built-in mapping for that direction.
+    """
+    from agent_migrate.plugins import get_mapper
+
+    plugin = get_mapper(ir.source_platform, target)
+    if plugin is not None:
+        mapped = plugin.map(deepcopy(ir), target)
+        mapped.target_platform = target
+        return mapped
+
     mapped = deepcopy(ir)
     mapped.target_platform = target
 
@@ -121,13 +130,14 @@ def _map_skill_to_codex(ir: ArtifactIR) -> ArtifactIR:
     """Claude skill -> Codex skill/custom prompt."""
     ir.confidence = Confidence.MEDIUM
 
-    # If skill uses Claude-specific tools, flag it
-    claude_tools = [t for t in ir.required_tools if t in ("Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent")]
+    # If skill uses Claude-specific tools, adapt and flag it
+    claude_tools = [t for t in ir.required_tools if t in _CLAUDE_TO_CODEX_TOOL_MAP]
+    _adapt_tools_in_ir(ir, _CLAUDE_TO_CODEX_TOOL_MAP)
     if claude_tools:
         ir.add_warning(
-            f"Skill references Claude-specific tools: {', '.join(claude_tools)}",
+            f"Skill referenced Claude-specific tools: {', '.join(claude_tools)}",
             code="CLAUDE_TOOLS_IN_SKILL",
-            suggestion="Adapt tool references to Codex equivalents",
+            suggestion="References were renamed to Codex equivalents; verify runtime behavior matches",
         )
         ir.portability_risk = PortabilityRisk.MEDIUM
 
@@ -142,6 +152,7 @@ def _map_skill_to_codex(ir: ArtifactIR) -> ArtifactIR:
 
 def _map_command_to_codex(ir: ArtifactIR) -> ArtifactIR:
     """Claude command -> Codex custom prompt or skill."""
+    _adapt_tools_in_ir(ir, _CLAUDE_TO_CODEX_TOOL_MAP)
     if ir.intent == SemanticIntent.WORKFLOW_TEMPLATE:
         ir.metadata["codex_target"] = "skill"
         ir.confidence = Confidence.MEDIUM
@@ -200,6 +211,7 @@ def _map_subagent_to_codex(ir: ArtifactIR) -> ArtifactIR:
     """Claude subagent -> Codex agent TOML."""
     ir.metadata["codex_target"] = "agent_toml"
     ir.confidence = Confidence.MEDIUM
+    _adapt_tools_in_ir(ir, _CLAUDE_TO_CODEX_TOOL_MAP)
 
     # Claude subagents may have different orchestration models
     ir.add_warning(
@@ -277,6 +289,7 @@ def _map_skill_to_claude(ir: ArtifactIR) -> ArtifactIR:
     """Codex skill -> Claude skill with SKILL.md."""
     ir.metadata["claude_target"] = "skill_directory"
     ir.confidence = Confidence.MEDIUM
+    _adapt_tools_in_ir(ir, _CODEX_TO_CLAUDE_TOOL_MAP)
     return ir
 
 
@@ -284,6 +297,7 @@ def _map_command_to_claude(ir: ArtifactIR) -> ArtifactIR:
     """Codex command/prompt -> Claude command."""
     ir.metadata["claude_target"] = "command"
     ir.confidence = Confidence.HIGH
+    _adapt_tools_in_ir(ir, _CODEX_TO_CLAUDE_TOOL_MAP)
     return ir
 
 
@@ -302,6 +316,7 @@ def _map_subagent_to_claude(ir: ArtifactIR) -> ArtifactIR:
     """Codex agent -> Claude subagent reference (in CLAUDE.md or as skill)."""
     ir.metadata["claude_target"] = "subagent_skill"
     ir.confidence = Confidence.MEDIUM
+    _adapt_tools_in_ir(ir, _CODEX_TO_CLAUDE_TOOL_MAP)
     ir.add_warning(
         "Codex agent TOML converted to Claude skill with agent persona",
         code="AGENT_TO_SKILL",
@@ -353,6 +368,37 @@ _CLAUDE_TO_CODEX_TOOL_MAP = {
 }
 
 _CODEX_TO_CLAUDE_TOOL_MAP = {v: k for k, v in _CLAUDE_TO_CODEX_TOOL_MAP.items()}
+
+
+def _adapt_tools_in_ir(ir: ArtifactIR, mapping: dict[str, str]) -> list[str]:
+    """Rename tool references in instructions and required_tools.
+
+    Backticked tool names in the instruction body are replaced with the
+    target platform's equivalent; required_tools entries are renamed.
+    Returns the list of applied renames (also stored in metadata).
+    """
+    adapted: list[str] = []
+
+    if ir.instructions:
+        for old, new in mapping.items():
+            if f"`{old}`" in ir.instructions:
+                ir.instructions = ir.instructions.replace(f"`{old}`", f"`{new}`")
+                adapted.append(f"{old}->{new}")
+
+    if ir.required_tools:
+        renamed = []
+        for tool in ir.required_tools:
+            if tool in mapping:
+                renamed.append(mapping[tool])
+                adapted.append(f"{tool}->{mapping[tool]}")
+            else:
+                renamed.append(tool)
+        ir.required_tools = renamed
+
+    if adapted:
+        existing = ir.metadata.get("adapted_tools", [])
+        ir.metadata["adapted_tools"] = sorted(set(existing) | set(adapted))
+    return adapted
 
 
 def _adapt_claude_references_for_codex(section: Section) -> None:

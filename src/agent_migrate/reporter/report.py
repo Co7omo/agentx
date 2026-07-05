@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
 
-from agent_migrate.ir import ArtifactIR, Confidence, Platform, WarningLevel
+from agent_migrate.ir import ArtifactIR, WarningLevel
 from agent_migrate.renderer.render import RenderResult
 
 
@@ -122,8 +121,8 @@ def generate_markdown_report(report: ConversionReport) -> str:
     # Summary
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"| Metric | Count |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Count |")
+    lines.append("|--------|-------|")
     lines.append(f"| Detected | {report.items_detected} |")
     lines.append(f"| Converted | {report.items_converted} |")
     lines.append(f"| Skipped | {report.items_skipped} |")

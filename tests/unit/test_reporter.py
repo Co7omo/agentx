@@ -2,7 +2,7 @@
 
 import json
 
-from agent_migrate.ir import Confidence, Platform
+from agent_migrate.ir import Platform
 from agent_migrate.pipeline import convert_path
 from agent_migrate.reporter.report import (
     ConversionReport,

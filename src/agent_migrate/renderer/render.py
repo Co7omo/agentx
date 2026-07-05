@@ -14,7 +14,6 @@ from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
     Platform,
-    SemanticIntent,
 )
 
 
@@ -45,7 +44,10 @@ def render_artifact(ir: ArtifactIR, output_dir: Path | None = None) -> RenderRes
         result = RenderResult(ir=ir)
         result.files.append(RenderedOutput(
             path=f"{ir.name}.md",
-            content=f"# {ir.name}\n\n<!-- Could not determine target platform -->\n\n{ir.instructions or ir.raw_content}",
+            content=(
+                f"# {ir.name}\n\n<!-- Could not determine target platform -->\n\n"
+                f"{ir.instructions or ir.raw_content}"
+            ),
             description="Fallback output (unknown target platform)",
         ))
 
@@ -65,9 +67,7 @@ def _render_for_codex(ir: ArtifactIR) -> RenderResult:
 
     if kind == ArtifactKind.INSTRUCTION_DOC:
         result.files.append(_render_agents_md(ir))
-    elif kind == ArtifactKind.SKILL:
-        result.files.append(_render_codex_skill(ir))
-    elif kind == ArtifactKind.COMMAND and target == "skill":
+    elif kind == ArtifactKind.SKILL or kind == ArtifactKind.COMMAND and target == "skill":
         result.files.append(_render_codex_skill(ir))
     elif kind == ArtifactKind.COMMAND:
         result.files.append(_render_codex_custom_prompt(ir))
@@ -99,9 +99,7 @@ def _render_for_claude(ir: ArtifactIR) -> RenderResult:
 
     if kind == ArtifactKind.INSTRUCTION_DOC:
         result.files.append(_render_claude_md(ir))
-    elif kind in (ArtifactKind.SKILL, ArtifactKind.SUBAGENT) and target == "subagent_skill":
-        result.files.extend(_render_claude_skill_dir(ir))
-    elif kind == ArtifactKind.SKILL:
+    elif kind == ArtifactKind.SKILL or (kind == ArtifactKind.SUBAGENT and target == "subagent_skill"):
         result.files.extend(_render_claude_skill_dir(ir))
     elif kind == ArtifactKind.COMMAND:
         result.files.append(_render_claude_command(ir))
@@ -273,7 +271,7 @@ def _render_codex_config_fragment(ir: ArtifactIR) -> RenderedOutput:
 def _render_codex_hook_scaffold(ir: ArtifactIR) -> RenderedOutput:
     """Render a hook scaffold for Codex."""
     event = ir.triggers[0].event if ir.triggers else "unknown"
-    lines = [f"#!/usr/bin/env bash", ""]
+    lines = ["#!/usr/bin/env bash", ""]
     lines.append(f"# Hook scaffold: {ir.name}")
     lines.append(f"# Converted from {ir.source_platform.value} hook")
     lines.append(f"# Original event: {event}")

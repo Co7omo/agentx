@@ -1,24 +1,33 @@
-"""Plugin system for future ecosystem support.
+"""Plugin system for additional ecosystem support.
+
+Registered plugins are consulted by the pipeline *before* the built-in
+logic: detector plugins get first chance at classifying a path, and a
+mapper plugin registered for a (source, target) pair overrides the
+built-in mapping for that direction.
 
 To add a new ecosystem:
-1. Create a module in this package (e.g., plugins/openai.py)
-2. Implement detect, parse, map, and render functions
-3. Register them via the registry
+1. Create a module (e.g., plugins/openai.py)
+2. Implement the DetectorPlugin / MapperPlugin protocols
+3. Register instances via register_detector / register_mapper
 """
 
 from __future__ import annotations
 
-from typing import Callable, Protocol
+from typing import Protocol
 
 from agent_migrate.ir import ArtifactIR, Platform
 
 
 class DetectorPlugin(Protocol):
-    def detect(self, path: str) -> ArtifactIR | None: ...
+    def detect(self, path: str) -> ArtifactIR | None:
+        """Return an IR for the path, or None if not recognized."""
+        ...
 
 
 class MapperPlugin(Protocol):
-    def map(self, ir: ArtifactIR, target: Platform) -> ArtifactIR: ...
+    def map(self, ir: ArtifactIR, target: Platform) -> ArtifactIR:
+        """Map an IR to the target platform."""
+        ...
 
 
 _detector_registry: dict[str, DetectorPlugin] = {}
@@ -39,3 +48,18 @@ def get_detector(name: str) -> DetectorPlugin | None:
 
 def get_mapper(source: Platform, target: Platform) -> MapperPlugin | None:
     return _mapper_registry.get((source, target))
+
+
+def detect_with_plugins(path: str) -> ArtifactIR | None:
+    """Run all registered detector plugins; first non-None result wins."""
+    for plugin in _detector_registry.values():
+        result = plugin.detect(path)
+        if result is not None:
+            return result
+    return None
+
+
+def clear_registries() -> None:
+    """Remove all registered plugins (mainly for tests)."""
+    _detector_registry.clear()
+    _mapper_registry.clear()

@@ -1,6 +1,5 @@
 """Tests for the renderer layer."""
 
-from pathlib import Path
 
 from agent_migrate.classifier import classify_artifact
 from agent_migrate.detector import detect_artifact
@@ -53,7 +52,7 @@ class TestRenderToClaude:
     def test_render_claude_md(self, agents_md, tmp_output):
         result = _render_pipeline(agents_md, Platform.CLAUDE, tmp_output)
         assert len(result.files) > 0
-        claude_file = next(f for f in result.files if "CLAUDE.md" in f.path)
+        assert any("CLAUDE.md" in f.path for f in result.files)
         assert (tmp_output / "CLAUDE.md").exists()
 
     def test_render_subagent_as_skill(self, codex_agent_toml, tmp_output):
