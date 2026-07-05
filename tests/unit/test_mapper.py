@@ -61,6 +61,36 @@ class TestMapToClaude:
         assert ir.confidence in (Confidence.HIGH, Confidence.MEDIUM)
 
 
+class TestToolAdaptation:
+    def test_skill_instructions_and_tools_adapted_for_codex(self, tmp_path):
+        skill_dir = tmp_path / "skills" / "helper"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: helper\ndescription: Helper skill\n---\n"
+            "Use `Read` to open the file, then run `Bash` commands.\n"
+        )
+        ir = _full_pipeline(skill_dir, Platform.CODEX)
+        assert "`file_read`" in ir.instructions
+        assert "`shell`" in ir.instructions
+        assert "`Read`" not in ir.instructions
+        assert "Read" not in ir.required_tools
+        assert "file_read" in ir.required_tools
+        assert "Read->file_read" in ir.metadata["adapted_tools"]
+
+    def test_command_instructions_adapted_for_codex(self, tmp_path):
+        cmd = tmp_path / "commands" / "open.md"
+        cmd.parent.mkdir()
+        cmd.write_text("---\nallowed-tools: Read, Grep\n---\nUse `Grep` to find matches.")
+        ir = _full_pipeline(cmd, Platform.CODEX)
+        assert "`search`" in ir.instructions
+        assert ir.required_tools == ["file_read", "search"]
+
+    def test_codex_agent_tools_adapted_for_claude(self, codex_agent_toml):
+        ir = _full_pipeline(codex_agent_toml, Platform.CLAUDE)
+        codex_names = {"file_read", "file_write", "shell", "search"}
+        assert not codex_names & set(ir.required_tools)
+
+
 class TestSamePlatformWarning:
     def test_same_platform_warning(self, claude_md):
         ir = detect_artifact(claude_md)
