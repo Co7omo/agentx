@@ -22,7 +22,17 @@ from agent_migrate.ir import (
 
 
 def detect_artifact(path: Path) -> ArtifactIR:
-    """Detect what kind of artifact a file or directory represents."""
+    """Detect what kind of artifact a file or directory represents.
+
+    Registered detector plugins are consulted first; the built-in
+    detection logic is the fallback.
+    """
+    from agent_migrate.plugins import detect_with_plugins
+
+    plugin_result = detect_with_plugins(str(path))
+    if plugin_result is not None:
+        return plugin_result
+
     if path.is_dir():
         return _detect_dir_artifact(path)
     return _detect_file_artifact(path)
@@ -42,14 +52,14 @@ def detect_directory(path: Path) -> list[ArtifactIR]:
         if item.name.startswith(".") and item.name not in (".codex", ".claude"):
             continue
         if item.is_file():
-            ir = _detect_file_artifact(item)
+            ir = detect_artifact(item)
             if ir.kind != ArtifactKind.UNKNOWN:
                 results.append(ir)
         elif item.is_dir():
             if item.name in _CONTAINER_DIRS:
                 results.extend(detect_directory(item))
             else:
-                ir = _detect_dir_artifact(item)
+                ir = detect_artifact(item)
                 if ir.kind != ArtifactKind.UNKNOWN:
                     results.append(ir)
     return results

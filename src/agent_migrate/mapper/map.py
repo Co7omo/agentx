@@ -25,7 +25,19 @@ from agent_migrate.ir import (
 
 
 def map_artifact(ir: ArtifactIR, target: Platform) -> ArtifactIR:
-    """Map an IR to the target platform, returning a new IR."""
+    """Map an IR to the target platform, returning a new IR.
+
+    A mapper plugin registered for (source, target) overrides the
+    built-in mapping for that direction.
+    """
+    from agent_migrate.plugins import get_mapper
+
+    plugin = get_mapper(ir.source_platform, target)
+    if plugin is not None:
+        mapped = plugin.map(deepcopy(ir), target)
+        mapped.target_platform = target
+        return mapped
+
     mapped = deepcopy(ir)
     mapped.target_platform = target
 

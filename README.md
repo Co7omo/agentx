@@ -198,7 +198,20 @@ pytest --cov=agent_migrate # with coverage
 
 ## Extending
 
-The plugin system (`src/agent_migrate/plugins/`) supports adding new ecosystems. Implement `DetectorPlugin` and `MapperPlugin` protocols and register them.
+The plugin system (`src/agent_migrate/plugins/`) supports adding new ecosystems. Registered plugins are consulted **before** the built-in logic: detector plugins get first chance at classifying a path, and a mapper plugin registered for a `(source, target)` pair overrides the built-in mapping for that direction.
+
+```python
+from agent_migrate.ir import ArtifactIR, ArtifactKind, Platform
+from agent_migrate.plugins import register_detector, register_mapper
+
+class GeminiDetector:
+    def detect(self, path: str) -> ArtifactIR | None:
+        if path.endswith("GEMINI.md"):
+            return ArtifactIR(kind=ArtifactKind.INSTRUCTION_DOC, name="GEMINI", source_path=path)
+        return None
+
+register_detector("gemini", GeminiDetector())
+```
 
 ## Limitations
 
