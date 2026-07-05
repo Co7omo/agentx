@@ -28,6 +28,10 @@ def detect_artifact(path: Path) -> ArtifactIR:
     return _detect_file_artifact(path)
 
 
+# Directories that contain artifacts but are not artifacts themselves
+_CONTAINER_DIRS = ("skills", "commands", "agents", "rules", "hooks", "prompts", ".codex", ".claude")
+
+
 def detect_directory(path: Path) -> list[ArtifactIR]:
     """Scan a directory and detect all recognizable artifacts."""
     results: list[ArtifactIR] = []
@@ -35,19 +39,19 @@ def detect_directory(path: Path) -> list[ArtifactIR]:
         return [detect_artifact(path)]
 
     for item in sorted(path.iterdir()):
-        if item.name.startswith(".") and item.name not in (".codex",):
+        if item.name.startswith(".") and item.name not in (".codex", ".claude"):
             continue
         if item.is_file():
             ir = _detect_file_artifact(item)
             if ir.kind != ArtifactKind.UNKNOWN:
                 results.append(ir)
         elif item.is_dir():
-            ir = _detect_dir_artifact(item)
-            if ir.kind != ArtifactKind.UNKNOWN:
-                results.append(ir)
-            # Recurse into known directories
-            if item.name in ("skills", "commands", ".codex", "agents", "rules"):
+            if item.name in _CONTAINER_DIRS:
                 results.extend(detect_directory(item))
+            else:
+                ir = _detect_dir_artifact(item)
+                if ir.kind != ArtifactKind.UNKNOWN:
+                    results.append(ir)
     return results
 
 
@@ -104,13 +108,23 @@ def _detect_file_artifact(path: Path) -> ArtifactIR:
         ir.description = "Codex agent instruction document"
         return ir
 
-    if name == "config.toml" and ".codex" in str(path):
+    if name == "config.toml" and _path_contains(path, ".codex"):
         ir.kind = ArtifactKind.CONFIG
         ir.source_platform = Platform.CODEX
         ir.intent = SemanticIntent.RUNTIME_CONFIG
         ir.execution_model = ExecutionModel.CONFIG_SETTING
         ir.confidence = Confidence.HIGH
         ir.description = "Codex project configuration"
+        return ir
+
+    # Claude settings.json
+    if name in ("settings.json", "settings.local.json") and _path_contains(path, ".claude"):
+        ir.kind = ArtifactKind.CONFIG
+        ir.source_platform = Platform.CLAUDE
+        ir.intent = SemanticIntent.RUNTIME_CONFIG
+        ir.execution_model = ExecutionModel.CONFIG_SETTING
+        ir.confidence = Confidence.HIGH
+        ir.description = "Claude project settings"
         return ir
 
     # Codex agent TOML
@@ -226,7 +240,8 @@ def _extract_frontmatter(content: str) -> dict[str, Any]:
         return {}
     try:
         import yaml
-        return yaml.safe_load(match.group(1)) or {}
+        data = yaml.safe_load(match.group(1))
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
