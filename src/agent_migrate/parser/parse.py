@@ -141,8 +141,8 @@ def _parse_subagent(ir: ArtifactIR) -> ArtifactIR:
 def _parse_codex_agent_toml(ir: ArtifactIR) -> ArtifactIR:
     """Parse a Codex agent TOML file."""
     try:
-        import tomli
-        data = tomli.loads(ir.raw_content)
+        from agent_migrate._compat import tomllib
+        data = tomllib.loads(ir.raw_content)
     except Exception:
         ir.add_warning("Failed to parse TOML content", level=WarningLevel.ERROR)
         return ir
@@ -203,8 +203,8 @@ def _parse_config(ir: ArtifactIR) -> ArtifactIR:
 
     if suffix == ".toml":
         try:
-            import tomli
-            ir.metadata = tomli.loads(content)
+            from agent_migrate._compat import tomllib
+            ir.metadata = tomllib.loads(content)
         except Exception:
             ir.add_warning("Failed to parse TOML", level=WarningLevel.ERROR)
     elif suffix == ".json":

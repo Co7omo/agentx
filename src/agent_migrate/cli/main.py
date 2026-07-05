@@ -421,8 +421,8 @@ def _validate_output(path: Path, target: Platform) -> list[dict]:
         # Check TOML files are valid
         for toml_file in path.rglob("*.toml"):
             try:
-                import tomli
-                tomli.loads(toml_file.read_text())
+                from agent_migrate._compat import tomllib
+                tomllib.loads(toml_file.read_text())
             except Exception as e:
                 issues.append({
                     "level": "error",
