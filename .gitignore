@@ -9,3 +9,4 @@ htmlcov/
 *.egg
 .eggs/
 .claude/settings.local.json
+.DS_Store
