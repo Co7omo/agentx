@@ -94,7 +94,10 @@ agentx explain-ir ./CLAUDE.md --json
 | Custom commands | Yes | Frontmatter, instructions | -> Custom prompt / skill |
 | Rules | Yes | Constraints, intent classification | -> AGENTS.md section / config / hook scaffold |
 | Hooks | Yes | Lifecycle events, dependencies | -> Hook scaffold + warning |
+| `settings.json` | Yes | `.claude/settings.json`, `.claude/settings.local.json` | -> Codex config |
 | Config files | Yes | JSON/YAML/TOML | -> Codex config |
+
+Artifacts are discovered both at the project root (`skills/`, `commands/`, `rules/`, `hooks/`, `prompts/`) and inside the `.claude/` and `.codex/` directories.
 
 ### Codex artifacts
 

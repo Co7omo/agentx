@@ -99,7 +99,11 @@ def _parse_command(ir: ArtifactIR) -> ArtifactIR:
         ir.name = fm.get("name", ir.name)
         ir.description = fm.get("description", ir.description)
         if "allowed-tools" in fm:
-            ir.required_tools = fm["allowed-tools"] if isinstance(fm["allowed-tools"], list) else [fm["allowed-tools"]]
+            raw_tools = fm["allowed-tools"]
+            if isinstance(raw_tools, list):
+                ir.required_tools = [str(t).strip() for t in raw_tools]
+            else:
+                ir.required_tools = [t.strip() for t in str(raw_tools).split(",") if t.strip()]
 
     ir.instructions = _strip_frontmatter(content)
     ir.sections = _split_markdown_sections(content)
@@ -311,7 +315,8 @@ def _detect_dependencies(content: str) -> list[ExternalDependency]:
         ))
     # API/service references
     for service in re.findall(r"(?:https?://[^\s)]+)", content):
-        deps.append(ExternalDependency(name=service, kind="api", portable=True))
+        if not any(d.name == service for d in deps):
+            deps.append(ExternalDependency(name=service, kind="api", portable=True))
     return deps
 
 

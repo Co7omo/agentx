@@ -71,11 +71,11 @@ def _render_for_codex(ir: ArtifactIR) -> RenderResult:
         result.files.append(_render_codex_skill(ir))
     elif kind == ArtifactKind.COMMAND:
         result.files.append(_render_codex_custom_prompt(ir))
-    elif kind == ArtifactKind.RULE and target == "agents_md_section":
+    elif target == "agents_md_section":
         result.files.append(_render_codex_rule_as_section(ir))
-    elif kind == ArtifactKind.RULE and target == "config":
+    elif target == "config":
         result.files.append(_render_codex_config_fragment(ir))
-    elif kind in (ArtifactKind.SUBAGENT,) or (kind == ArtifactKind.RULE and target in ("agent_toml", "")):
+    elif kind == ArtifactKind.SUBAGENT:
         result.files.append(_render_codex_agent_toml(ir))
     elif kind == ArtifactKind.HOOK:
         result.files.append(_render_codex_hook_scaffold(ir))
@@ -138,7 +138,9 @@ def _render_agents_md(ir: ArtifactIR) -> RenderedOutput:
             lines.append(section.content)
             lines.append("")
 
-    if ir.constraints:
+    # Constraints extracted from sections are already rendered above;
+    # only add a dedicated block when they have no section of their own.
+    if ir.constraints and not ir.sections:
         lines.append("## Constraints")
         lines.append("")
         for c in ir.constraints:
@@ -302,7 +304,7 @@ def _render_codex_config(ir: ArtifactIR) -> RenderedOutput:
     """Render a Codex config.toml."""
     import tomli_w
 
-    data = ir.metadata.copy()
+    data = _public_metadata(ir)
     content = f"# Converted from {ir.source_platform.value} config\n"
     content += f"# Source: {ir.source_path}\n\n"
     if data:
@@ -334,7 +336,7 @@ def _render_claude_md(ir: ArtifactIR) -> RenderedOutput:
             lines.append(section.content)
             lines.append("")
 
-    if ir.constraints:
+    if ir.constraints and not ir.sections:
         lines.append("## Constraints")
         lines.append("")
         for c in ir.constraints:
@@ -381,7 +383,7 @@ def _render_claude_command(ir: ArtifactIR) -> RenderedOutput:
     if ir.description:
         fm_lines.append(f"description: {ir.description}")
     if ir.required_tools:
-        fm_lines.append(f"allowed-tools: {ir.required_tools}")
+        fm_lines.append(f"allowed-tools: {', '.join(ir.required_tools)}")
     fm_lines.append("---")
     fm_lines.append("")
 
@@ -434,7 +436,7 @@ def _render_claude_settings(ir: ArtifactIR) -> RenderedOutput:
     import json
 
     data = {"_comment": f"Converted from {ir.source_platform.value} config"}
-    data.update(ir.metadata)
+    data.update(_public_metadata(ir))
 
     return RenderedOutput(
         path="_fragments/settings.json",
@@ -444,6 +446,12 @@ def _render_claude_settings(ir: ArtifactIR) -> RenderedOutput:
 
 
 # --- Helpers ---
+
+def _public_metadata(ir: ArtifactIR) -> dict:
+    """IR metadata without internal routing keys."""
+    internal = {"codex_target", "claude_target"}
+    return {k: v for k, v in ir.metadata.items() if k not in internal}
+
 
 def _safe_filename(name: str) -> str:
     """Convert a name to a safe filename."""
