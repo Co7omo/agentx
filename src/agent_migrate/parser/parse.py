@@ -12,7 +12,6 @@ from pathlib import Path
 from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
-    Confidence,
     ExternalDependency,
     Platform,
     PortabilityRisk,
@@ -49,7 +48,8 @@ def _parse_instruction_doc(ir: ArtifactIR) -> ArtifactIR:
 
     # Extract constraints (lines starting with "- " under constraint-like headings)
     for sec in sections:
-        if any(kw in sec.title.lower() for kw in ("constraint", "rule", "policy", "never", "always", "do not")):
+        constraint_keywords = ("constraint", "rule", "policy", "never", "always", "do not")
+        if any(kw in sec.title.lower() for kw in constraint_keywords):
             ir.constraints.extend(_extract_list_items(sec.content))
 
     # Detect external dependencies

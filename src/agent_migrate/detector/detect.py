@@ -68,7 +68,6 @@ def detect_directory(path: Path) -> list[ArtifactIR]:
 def _detect_file_artifact(path: Path) -> ArtifactIR:
     """Detect artifact type from a single file."""
     name = path.name
-    stem = path.stem.lower()
     suffix = path.suffix.lower()
 
     ir = ArtifactIR(
@@ -150,16 +149,16 @@ def _detect_file_artifact(path: Path) -> ArtifactIR:
     # --- Heuristic detection ---
 
     # Shell scripts that look like hooks
-    if suffix in (".sh", ".bash", ".zsh") or (suffix == "" and _is_executable(content)):
-        if _looks_like_hook(content, name):
-            ir.kind = ArtifactKind.HOOK
-            ir.source_platform = _guess_platform_from_path(path)
-            ir.intent = SemanticIntent.EXECUTION_HOOK
-            ir.execution_model = ExecutionModel.LIFECYCLE_HOOK
-            ir.confidence = Confidence.MEDIUM
-            ir.portability_risk = PortabilityRisk.MEDIUM
-            ir.description = f"Lifecycle hook script: {name}"
-            return ir
+    is_script = suffix in (".sh", ".bash", ".zsh") or (suffix == "" and _is_executable(content))
+    if is_script and _looks_like_hook(content, name):
+        ir.kind = ArtifactKind.HOOK
+        ir.source_platform = _guess_platform_from_path(path)
+        ir.intent = SemanticIntent.EXECUTION_HOOK
+        ir.execution_model = ExecutionModel.LIFECYCLE_HOOK
+        ir.confidence = Confidence.MEDIUM
+        ir.portability_risk = PortabilityRisk.MEDIUM
+        ir.description = f"Lifecycle hook script: {name}"
+        return ir
 
     # Markdown files that look like rules
     if suffix == ".md" and _path_contains(path, "rules"):
@@ -182,15 +181,16 @@ def _detect_file_artifact(path: Path) -> ArtifactIR:
         return ir
 
     # JSON/YAML config files
-    if suffix in (".json", ".yaml", ".yml"):
-        if any(kw in content.lower() for kw in ("model", "agent", "tool", "hook")):
-            ir.kind = ArtifactKind.CONFIG
-            ir.source_platform = _guess_platform_from_path(path)
-            ir.intent = SemanticIntent.RUNTIME_CONFIG
-            ir.execution_model = ExecutionModel.CONFIG_SETTING
-            ir.confidence = Confidence.LOW
-            ir.description = f"Configuration file: {name}"
-            return ir
+    if suffix in (".json", ".yaml", ".yml") and any(
+        kw in content.lower() for kw in ("model", "agent", "tool", "hook")
+    ):
+        ir.kind = ArtifactKind.CONFIG
+        ir.source_platform = _guess_platform_from_path(path)
+        ir.intent = SemanticIntent.RUNTIME_CONFIG
+        ir.execution_model = ExecutionModel.CONFIG_SETTING
+        ir.confidence = Confidence.LOW
+        ir.description = f"Configuration file: {name}"
+        return ir
 
     return ir
 

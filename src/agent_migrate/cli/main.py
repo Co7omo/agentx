@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -14,7 +13,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from agent_migrate import __version__
-from agent_migrate.ir import ArtifactIR, Confidence, Platform, WarningLevel
+from agent_migrate.ir import ArtifactIR, Confidence, Platform
 from agent_migrate.pipeline import convert_path, inspect_path, plan_migration
 from agent_migrate.reporter.report import (
     ConversionReport,
@@ -37,7 +36,7 @@ def _parse_platform(value: str) -> Platform:
         return Platform(value.lower())
     except ValueError:
         err_console.print(f"[red]Unknown platform:[/red] {value}. Use 'claude' or 'codex'.")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def _version_callback(value: bool):
@@ -48,7 +47,9 @@ def _version_callback(value: bool):
 
 @app.callback(invoke_without_command=True)
 def main(
-    version: bool = typer.Option(False, "--version", "-V", help="Show version", callback=_version_callback, is_eager=True),
+    version: bool = typer.Option(
+        False, "--version", "-V", help="Show version", callback=_version_callback, is_eager=True
+    ),
 ):
     pass
 
@@ -182,12 +183,12 @@ def diff_explain(
         panel_content.append(f"[bold]Confidence:[/bold] {_confidence_color(ir.confidence)}")
 
         if result.files:
-            panel_content.append(f"\n[bold]Would generate:[/bold]")
+            panel_content.append("\n[bold]Would generate:[/bold]")
             for f in result.files:
                 panel_content.append(f"  -> {f.path} ({f.description})")
 
         if ir.warnings:
-            panel_content.append(f"\n[bold]Warnings:[/bold]")
+            panel_content.append("\n[bold]Warnings:[/bold]")
             for w in ir.warnings:
                 color = {"info": "blue", "warn": "yellow", "error": "red"}.get(w.level.value, "white")
                 panel_content.append(f"  [{color}][{w.level.value}][/{color}] {w.message}")
@@ -195,7 +196,7 @@ def diff_explain(
                     panel_content.append(f"    [dim]{w.suggestion}[/dim]")
 
         if ir.manual_todos:
-            panel_content.append(f"\n[bold]Manual TODOs:[/bold]")
+            panel_content.append("\n[bold]Manual TODOs:[/bold]")
             for t in ir.manual_todos:
                 panel_content.append(f"  [{t.priority}] {t.description}")
 
@@ -298,7 +299,10 @@ def _print_conversion_report(report: ConversionReport, dry_run: bool, verbose: b
 
     console.print(f"\n[bold]{prefix}Conversion Report[/bold]")
     console.print(f"  {report.source_platform} -> {report.target_platform}")
-    console.print(f"  Detected: {report.items_detected}  Converted: {report.items_converted}  Skipped: {report.items_skipped}")
+    console.print(
+        f"  Detected: {report.items_detected}  "
+        f"Converted: {report.items_converted}  Skipped: {report.items_skipped}"
+    )
 
     if report.confidence_summary:
         parts = []

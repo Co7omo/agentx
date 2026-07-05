@@ -196,6 +196,12 @@ pytest -v                  # verbose
 pytest --cov=agent_migrate # with coverage
 ```
 
+## Linting
+
+```bash
+ruff check src tests
+```
+
 ## Extending
 
 The plugin system (`src/agent_migrate/plugins/`) supports adding new ecosystems. Registered plugins are consulted **before** the built-in logic: detector plugins get first chance at classifying a path, and a mapper plugin registered for a `(source, target)` pair overrides the built-in mapping for that direction.

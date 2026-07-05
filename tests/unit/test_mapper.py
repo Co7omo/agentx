@@ -2,7 +2,7 @@
 
 from agent_migrate.classifier import classify_artifact
 from agent_migrate.detector import detect_artifact
-from agent_migrate.ir import ArtifactKind, Confidence, Platform
+from agent_migrate.ir import Confidence, Platform
 from agent_migrate.mapper import map_artifact
 from agent_migrate.parser import parse_artifact
 

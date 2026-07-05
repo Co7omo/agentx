@@ -1,6 +1,5 @@
 """Tests for the detector layer."""
 
-from pathlib import Path
 
 from agent_migrate.detector import detect_artifact, detect_directory
 from agent_migrate.ir import ArtifactKind, Platform

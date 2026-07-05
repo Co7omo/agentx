@@ -1,8 +1,7 @@
 """Integration tests for the full pipeline."""
 
-from pathlib import Path
 
-from agent_migrate.ir import Confidence, Platform
+from agent_migrate.ir import Platform
 from agent_migrate.pipeline import convert_path, inspect_path, plan_migration
 
 

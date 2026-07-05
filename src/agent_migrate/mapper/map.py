@@ -13,13 +13,10 @@ from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
     Confidence,
-    ExecutionModel,
-    ManualTodo,
     Platform,
     PortabilityRisk,
     Section,
     SemanticIntent,
-    Warning,
     WarningLevel,
 )
 

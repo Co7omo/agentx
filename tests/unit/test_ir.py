@@ -1,15 +1,12 @@
 """Tests for the IR schema."""
 
 import json
-from pathlib import Path
 
 from agent_migrate.ir import (
     ArtifactIR,
     ArtifactKind,
     Confidence,
     Platform,
-    SemanticIntent,
-    WarningLevel,
 )
 
 
